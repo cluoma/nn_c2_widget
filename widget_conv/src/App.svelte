@@ -26,6 +26,10 @@
 		number: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
 		prediction: [],  // the output activation for each digit
 	};
+	function clear_prediction() {
+		prediction = null;
+		pred_probs.prediction = [];
+	}
 
 	/* predict the number
 	 *
@@ -105,6 +109,9 @@
 		canv.freeDrawingBrush.color = "#000000";
 		canv.backgroundColor = "#ffffff";
 		canv.renderAll();
+
+		canv.on('mouse:down', () => {clear_prediction();});
+
 		scaled_canv = new fabric.Canvas(scaled_canvas_id);
 	});
 </script>

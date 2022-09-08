@@ -16,6 +16,13 @@
 		number: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
 		prediction: [],  // the output activation for each digit
 	};
+	let pred_pixels = []; // pixel data from most recent prediction
+	function clear_prediction() {
+		prediction = null;
+		pred_probs.prediction = [];
+		pred_pixels = [];
+		wiw_state = "none";
+	}
 
 	/* sigmoid function needed for feedforward */
 	function sigmoid(z) {
@@ -87,7 +94,9 @@
 				max_val = a6.get([i]);
 			}
 		}
+		pred_pixels = num_array;
 		prediction = max_num;
+		wiw_state = "prediction";
 		return max_num;
 	}
 
@@ -96,6 +105,7 @@
 		canv.clear();
 		canv.backgroundColor = "#ffffff";
 		canv.renderAll();
+		clear_prediction();
 	}
 
 	/* callback when the 'predict' button is pressed
@@ -106,7 +116,7 @@
 	 * calls 'predict' on the grayscale pixels
 	 */
 	function predict() {
-		canv.freeDrawingBrush._finalizeAndAddPath();
+		//canv.freeDrawingBrush._finalizeAndAddPath();
 
 		let gfg = canvas_id.getContext("2d");
 		let ctxScaled = scaled_canvas_id.getContext("2d");
@@ -150,8 +160,45 @@
 		canv.freeDrawingBrush.color = "#000000";
 		canv.backgroundColor = "#ffffff";
 		canv.renderAll();
+
+		canv.on('mouse:down', () => {clear_prediction();});
+
 		scaled_canv = new fabric.Canvas(scaled_canvas_id);
 	});
+
+	function send_pixels(claimed_digit) {
+		wiw_state = "thankyou";
+		//console.log('Success:', {'question': myRadioQuestion.questionText, 'options': myRadioQuestion.options.filter(e => e.text != ''), });
+		fetch('https://mnist.linuxgame.net/mnistwidget/train', {
+  			method: 'POST',
+  			headers: {
+    			'Content-Type': 'application/json',
+  			},
+  			body: JSON.stringify({
+				  'pixels': pred_pixels,
+				  'claimed_digit': claimed_digit,
+				  'predicted_digit': prediction
+				}),
+		})
+		.then(response => response.json())
+		.then(data => {
+			console.log(data);
+			if (data.status === 200) {
+				console.log('tahnk you!');
+			} else {
+				console.log('wrong!');
+			}
+		})
+		.catch((error) => {
+  			console.error('Error:', error);
+		});
+	}
+
+	/* state for 'was I wrong' button */
+	/*
+	 * state: none -> prediction -> correction -> thankyou
+	 */
+	let wiw_state = "none";
 </script>
 
 <main>
@@ -170,11 +217,32 @@
 			/>
 		</div>
 		<div class="float-child" style="width: 180px;padding-top:0px;">
-			<h3 style="padding-top:0px;margin-top:0px;">
+			<h3 style="padding-top:0px;margin-top:0px;margin-bottom: 2px;">
 				Prediction: <strong class="predictionnum"
 					>{#if prediction !== null}{prediction}{/if}</strong
 				>
 			</h3>
+			{#if wiw_state === "prediction"}
+				<button on:click={() => {wiw_state = "correction";}} style="margin-top: -1em;">Was I Wrong?</button>
+			{:else if wiw_state === "correction"}
+			<div style="margin-top:10px;margin-bottom:10px;padding:0px;border:0px;">
+			<p style="font-size:0.85em;margin:0px;">Which digit did you draw?</p>
+			<button on:click={() => {send_pixels(0);}} style="margin-top: -1em;">0</button>
+			<button on:click={() => {send_pixels(1);}} style="margin-top: -1em;">1</button>
+			<button on:click={() => {send_pixels(2);}} style="margin-top: -1em;">2</button>
+			<button on:click={() => {send_pixels(3);}} style="margin-top: -1em;">3</button>
+			<button on:click={() => {send_pixels(4);}} style="margin-top: -1em;">4</button>
+			<button on:click={() => {send_pixels(5);}} style="margin-top: -1em;">5</button>
+			<button on:click={() => {send_pixels(6);}} style="margin-top: -1em;">6</button>
+			<button on:click={() => {send_pixels(7);}} style="margin-top: -1em;">7</button>
+			<button on:click={() => {send_pixels(8);}} style="margin-top: -1em;">8</button>
+			<button on:click={() => {send_pixels(9);}} style="margin-top: -1em;">9</button>
+			</div>
+			{:else if wiw_state === "thankyou"}
+			<div style="margin-top:10px;margin-bottom:10px;padding:0px;border:0px;">
+			<p style="font-size:0.85em;margin:0px;">Thank you for your help improving the model!</p>
+			</div>
+			{/if}
 			{#if prediction !== null}
 				<table id="responses">
 					<tr><th>number</th><th>prediction strength</th></tr>
@@ -195,6 +263,7 @@
 			MNIST data. Accuracy on test data was 98.2% but it performs rather
 			poorly in this tool.
 		</p>
+		<p>If the model guesses wrong, submit a correction using the 'Was I Wrong' button to help further train the model.</p>
 	</div>
 	<!-- <p>something</p>
 

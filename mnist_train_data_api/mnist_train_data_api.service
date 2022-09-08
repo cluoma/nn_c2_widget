@@ -1,0 +1,13 @@
+[Unit]
+Description=MNIST Train Data API Service
+After=network.target
+
+[Service]
+Type=simple
+User=colin
+WorkingDirectory=/home/colin/Documents/mnist_train_data_api
+ExecStart=/usr/bin/python3 main.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
